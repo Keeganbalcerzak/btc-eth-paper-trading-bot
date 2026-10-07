@@ -1,0 +1,74 @@
+services:
+  bot:
+    build: .
+    environment:
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_API_SECRET: ${ALPACA_API_SECRET:-}
+      ALPACA_PAPER: ${ALPACA_PAPER:-true}
+      ALPACA_TRADING_BASE_URL: ${ALPACA_TRADING_BASE_URL:-https://paper-api.alpaca.markets}
+      ALPACA_DATA_BASE_URL: ${ALPACA_DATA_BASE_URL:-https://data.alpaca.markets}
+      BOT_SYMBOLS: ${BOT_SYMBOLS:-BTC/USD,ETH/USD}
+      BOT_TIMEFRAME: ${BOT_TIMEFRAME:-15Min}
+      BOT_MAX_POSITION_PCT: ${BOT_MAX_POSITION_PCT:-0.10}
+      BOT_ACCOUNT_RISK_PER_TRADE_PCT: ${BOT_ACCOUNT_RISK_PER_TRADE_PCT:-0.0025}
+      BOT_DAILY_DRAWDOWN_PCT: ${BOT_DAILY_DRAWDOWN_PCT:-0.01}
+      BOT_TOTAL_DRAWDOWN_PCT: ${BOT_TOTAL_DRAWDOWN_PCT:-0.05}
+      BOT_MAX_SPREAD_BPS: ${BOT_MAX_SPREAD_BPS:-35}
+      BOT_MAX_FEED_AGE_SECONDS: ${BOT_MAX_FEED_AGE_SECONDS:-90}
+      BOT_STOP_LOSS_ATR: ${BOT_STOP_LOSS_ATR:-3}
+      BOT_MAX_ORDERS_PER_CYCLE: ${BOT_MAX_ORDERS_PER_CYCLE:-2}
+      BOT_MAX_CONSECUTIVE_ERROR_CYCLES: ${BOT_MAX_CONSECUTIVE_ERROR_CYCLES:-3}
+      BOT_POLL_SECONDS: ${BOT_POLL_SECONDS:-60}
+      BOT_BACKFILL_DAYS: ${BOT_BACKFILL_DAYS:-30}
+      BOT_MIN_BARS: ${BOT_MIN_BARS:-80}
+      BOT_AUTOSTART: ${BOT_AUTOSTART:-false}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://bot:bot@db:5432/bot}
+    command: uvicorn bot.api.app:create_app --factory --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  worker:
+    build: .
+    profiles:
+      - worker
+    environment:
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_API_SECRET: ${ALPACA_API_SECRET:-}
+      ALPACA_PAPER: ${ALPACA_PAPER:-true}
+      ALPACA_TRADING_BASE_URL: ${ALPACA_TRADING_BASE_URL:-https://paper-api.alpaca.markets}
+      ALPACA_DATA_BASE_URL: ${ALPACA_DATA_BASE_URL:-https://data.alpaca.markets}
+      BOT_SYMBOLS: ${BOT_SYMBOLS:-BTC/USD,ETH/USD}
+      BOT_TIMEFRAME: ${BOT_TIMEFRAME:-15Min}
+      BOT_MAX_POSITION_PCT: ${BOT_MAX_POSITION_PCT:-0.10}
+      BOT_ACCOUNT_RISK_PER_TRADE_PCT: ${BOT_ACCOUNT_RISK_PER_TRADE_PCT:-0.0025}
+      BOT_DAILY_DRAWDOWN_PCT: ${BOT_DAILY_DRAWDOWN_PCT:-0.01}
+      BOT_TOTAL_DRAWDOWN_PCT: ${BOT_TOTAL_DRAWDOWN_PCT:-0.05}
+      BOT_MAX_SPREAD_BPS: ${BOT_MAX_SPREAD_BPS:-35}
+      BOT_MAX_FEED_AGE_SECONDS: ${BOT_MAX_FEED_AGE_SECONDS:-90}
+      BOT_STOP_LOSS_ATR: ${BOT_STOP_LOSS_ATR:-3}
+      BOT_MAX_ORDERS_PER_CYCLE: ${BOT_MAX_ORDERS_PER_CYCLE:-2}
+      BOT_MAX_CONSECUTIVE_ERROR_CYCLES: ${BOT_MAX_CONSECUTIVE_ERROR_CYCLES:-3}
+      BOT_POLL_SECONDS: ${BOT_POLL_SECONDS:-60}
+      BOT_BACKFILL_DAYS: ${BOT_BACKFILL_DAYS:-30}
+      BOT_MIN_BARS: ${BOT_MIN_BARS:-80}
+      BOT_AUTOSTART: "false"
+      DATABASE_URL: ${DATABASE_URL:-postgresql://bot:bot@db:5432/bot}
+    command: python -m bot.runner trade
+    depends_on:
+      - db
+
+  db:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: bot
+      POSTGRES_PASSWORD: bot
+      POSTGRES_DB: bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - bot_pgdata:/var/lib/postgresql/data
+
+volumes:
+  bot_pgdata:
